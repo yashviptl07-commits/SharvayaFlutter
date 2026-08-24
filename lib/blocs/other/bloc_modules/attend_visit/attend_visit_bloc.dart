@@ -1,0 +1,397 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:soleoserp/blocs/base/base_bloc.dart';
+import 'package:soleoserp/models/api_requests/AttendVisit/attend_visit_delete_request.dart';
+import 'package:soleoserp/models/api_requests/AttendVisit/attend_visit_list_request.dart';
+import 'package:soleoserp/models/api_requests/AttendVisit/attend_visit_save_request.dart';
+import 'package:soleoserp/models/api_requests/Material_Outward_Request/material_outward_document_delete_request.dart';
+import 'package:soleoserp/models/api_requests/Material_Outward_Request/material_outward_document_list_request.dart';
+import 'package:soleoserp/models/api_requests/Material_Outward_Request/material_outward_document_upload_request.dart';
+import 'package:soleoserp/models/api_requests/complaint/complaint_no_list_request.dart';
+import 'package:soleoserp/models/api_requests/complaint/complaint_search_by_Id_request.dart';
+import 'package:soleoserp/models/api_requests/complaint/complaint_search_request.dart';
+import 'package:soleoserp/models/api_requests/customer/customer_label_value_request.dart';
+import 'package:soleoserp/models/api_requests/customer/customer_source_list_request.dart';
+import 'package:soleoserp/models/api_requests/toDo_request/transection_mode_list_request.dart';
+import 'package:soleoserp/models/api_responses/AttendVisit/attend_visit_delete_response.dart';
+import 'package:soleoserp/models/api_responses/Material_Outward_Response/material_outward_document_list_response.dart';
+import 'package:soleoserp/models/api_responses/attendVisit/attend_visit_list_response.dart';
+import 'package:soleoserp/models/api_responses/attendVisit/attend_visit_save_response.dart';
+import 'package:soleoserp/models/api_responses/complaint/complaint_list_response.dart';
+import 'package:soleoserp/models/api_responses/complaint/complaint_no_list_response.dart';
+import 'package:soleoserp/models/api_responses/complaint/complaint_search_response.dart';
+import 'package:soleoserp/models/api_responses/customer/customer_label_value_response.dart';
+import 'package:soleoserp/models/api_responses/customer/customer_source_response.dart';
+import 'package:soleoserp/models/api_responses/to_do/transection_mode_list_response.dart';
+import 'package:soleoserp/models/common/menu_rights/request/user_menu_rights_request.dart';
+import 'package:soleoserp/models/common/menu_rights/response/user_menu_rights_response.dart';
+import 'package:soleoserp/models/hema_automation/api_request/quick_complaint/quick_complaint_list_request.dart';
+import 'package:soleoserp/models/hema_automation/api_request/quick_complaint/quick_complaint_save_request.dart';
+import 'package:soleoserp/models/hema_automation/api_response/quick_complaint/quick_complaint_list_response.dart';
+import 'package:soleoserp/models/hema_automation/api_response/quick_complaint/quick_complaint_save_response.dart';
+import 'package:soleoserp/repositories/repository.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart' as path_provider;
+import 'package:uri_to_file/uri_to_file.dart';
+
+part 'attend_visit_events.dart';
+part 'attend_visit_states.dart';
+
+class AttendVisitBloc extends Bloc<AttendVisitEvents, AttendVisitStates> {
+  Repository userRepository = Repository.getInstance();
+  BaseBloc baseBloc;
+
+  AttendVisitBloc(this.baseBloc) : super(AttendVisitInitialState());
+
+  @override
+  Stream<AttendVisitStates> mapEventToState(AttendVisitEvents event) async* {
+    if (event is AttendVisitListCallEvent) {
+      yield* _mapAttenVisitCallEventToState(event);
+    }
+    if (event is ComplaintNoListCallEvent) {
+      yield* _mapComplaintNoListEventToState(event);
+    }
+    if (event is CustomerSourceCallEvent) {
+      yield* _mapCustomerSourceCallEventToState(event);
+    }
+    if (event is TransectionModeCallEvent) {
+      yield* _mapTransectionModeCallEventToState(event);
+    }
+    if (event is AttendVisitSaveCallEvent) {
+      yield* _mapAttendVisitSaveCallEventToState(event);
+    }
+    if (event is ComplaintSearchByNameCallEvent) {
+      yield* _mapSearchByNameCallEventToState(event);
+    }
+    if (event is AttendVisitSearchByIDCallEvent) {
+      yield* _mapSearchByIDCallEventToState(event);
+    }
+    if (event is AttendVisitDeleteEvent) {
+      yield* _mapAttendVisitEventToState(event);
+    }
+    if (event is ComplaintSearchByIDCallEvent) {
+      yield* _mapSearchByComplaintIDCallEventToState(event);
+    }
+    if (event is QuickComplaintListRequestCallEvent) {
+      yield* _mapQuickComplaintListRequestCallEventToState(event);
+    }
+    if (event is QuickComplaintSaveRequestCallEvent) {
+      yield* _mapQuickComplaintSaveRequestCallEventToState(event);
+    }
+    if (event is UserMenuRightsRequestEvent) {
+      yield* _mapUserMenuRightsRequestEventState(event);
+    }
+    if (event is SearchFollowupCustomerListByNameCallEvent) {
+      yield* _mapFollowupCustomerListByNameCallEventToState(event);
+    }
+    if (event is DefDocumentListRequestEvent) {
+      yield* _mapVehicleDefDocumentListEventState(event);
+    }
+  }
+
+  Stream<AttendVisitStates> _mapAttenVisitCallEventToState(
+      AttendVisitListCallEvent event) async* {
+    try {
+      baseBloc.emit(ShowProgressIndicatorState(true));
+
+      AttendVisitListResponse respo = await userRepository.getAttenVisitList(
+          event.pageNo, event.attendVisitListRequest);
+
+      yield AttendVisitListCallResponseState(event.pageNo, respo);
+    } catch (error, stacktrace) {
+      baseBloc.emit(ApiCallFailureState(error));
+      print(stacktrace);
+    } finally {
+      baseBloc.emit(ShowProgressIndicatorState(false));
+    }
+  }
+
+  Stream<AttendVisitStates> _mapComplaintNoListEventToState(
+      ComplaintNoListCallEvent event) async* {
+    try {
+      baseBloc.emit(ShowProgressIndicatorState(true));
+
+      ComplaintNoListResponse respo =
+          await userRepository.getComplaintNoList(event.complaintNoListRequest);
+
+      yield ComplaintNoListCallResponseState(respo);
+    } catch (error, stacktrace) {
+      baseBloc.emit(ApiCallFailureState(error));
+      print(stacktrace);
+    } finally {
+      baseBloc.emit(ShowProgressIndicatorState(false));
+    }
+  }
+
+  Stream<AttendVisitStates> _mapCustomerSourceCallEventToState(
+      CustomerSourceCallEvent event) async* {
+    try {
+      baseBloc.emit(ShowProgressIndicatorState(true));
+
+      CustomerSourceResponse respo =
+          await userRepository.customer_Source_List_call(event.request1);
+      yield CustomerSourceCallEventResponseState(respo);
+    } catch (error, stacktrace) {
+      baseBloc.emit(ApiCallFailureState(error));
+      print(stacktrace);
+    } finally {
+      baseBloc.emit(ShowProgressIndicatorState(false));
+    }
+  }
+
+  Stream<AttendVisitStates> _mapTransectionModeCallEventToState(
+      TransectionModeCallEvent event) async* {
+    try {
+      baseBloc.emit(ShowProgressIndicatorState(true));
+      TransectionModeListResponse bankVoucherDeleteResponse =
+          await userRepository.getTransectionModeList(event.request);
+      yield TransectionModeResponseState(bankVoucherDeleteResponse);
+    } catch (error, stacktrace) {
+      baseBloc.emit(ApiCallFailureState(error));
+      print(stacktrace);
+    } finally {
+      baseBloc.emit(ShowProgressIndicatorState(false));
+    }
+  }
+
+  Stream<AttendVisitStates> _mapAttendVisitSaveCallEventToState(
+      AttendVisitSaveCallEvent event) async* {
+    try {
+      baseBloc.emit(ShowProgressIndicatorState(true));
+      AttendVisitSaveResponse bankVoucherDeleteResponse =
+          await userRepository.getAttendVisitSave(event.pkID, event.request);
+      yield AttendVisitSaveResponseState(
+          event.context, bankVoucherDeleteResponse);
+    } catch (error, stacktrace) {
+      baseBloc.emit(ApiCallFailureState(error));
+      print(stacktrace);
+    } finally {
+      baseBloc.emit(ShowProgressIndicatorState(false));
+    }
+  }
+
+  Stream<AttendVisitStates> _mapSearchByNameCallEventToState(
+      ComplaintSearchByNameCallEvent event) async* {
+    try {
+      baseBloc.emit(ShowProgressIndicatorState(true));
+
+      ComplaintSearchResponse response = await userRepository
+          .getVisitSearchByName(event.complaintSearchRequest);
+      yield ComplaintSearchByNameResponseState(response);
+    } catch (error, stacktrace) {
+      baseBloc.emit(ApiCallFailureState(error));
+      print(stacktrace);
+    } finally {
+      await Future.delayed(const Duration(milliseconds: 500), () {});
+      baseBloc.emit(ShowProgressIndicatorState(false));
+    }
+  }
+
+  Stream<AttendVisitStates> _mapSearchByIDCallEventToState(
+      AttendVisitSearchByIDCallEvent event) async* {
+    try {
+      baseBloc.emit(ShowProgressIndicatorState(true));
+
+      AttendVisitListResponse response = await userRepository
+          .getVisitSearchByID(event.pkID, event.complaintSearchByIDRequest);
+      yield AttendVisitSearchByIDResponseState(response);
+    } catch (error, stacktrace) {
+      baseBloc.emit(ApiCallFailureState(error));
+      print(stacktrace);
+    } finally {
+      await Future.delayed(const Duration(milliseconds: 500), () {});
+      baseBloc.emit(ShowProgressIndicatorState(false));
+    }
+  }
+
+  Stream<AttendVisitStates> _mapAttendVisitEventToState(
+      AttendVisitDeleteEvent event) async* {
+    try {
+      baseBloc.emit(ShowProgressIndicatorState(true));
+
+      AttendVisitDeleteResponse response = await userRepository
+          .getAttendVisitDeleteAPI(event.attendVisitDeleteRequest);
+      yield AttendVisitDeleteResponseState(response);
+    } catch (error, stacktrace) {
+      baseBloc.emit(ApiCallFailureState(error));
+      print(stacktrace);
+    } finally {
+      await Future.delayed(const Duration(milliseconds: 500), () {});
+      baseBloc.emit(ShowProgressIndicatorState(false));
+    }
+  }
+
+  Stream<AttendVisitStates> _mapSearchByComplaintIDCallEventToState(
+      ComplaintSearchByIDCallEvent event) async* {
+    try {
+      baseBloc.emit(ShowProgressIndicatorState(true));
+
+      ComplaintListResponse response = await userRepository
+          .getComplaintSearchByID(event.pkID, event.complaintSearchByIDRequest);
+      yield ComplaintSearchByIDResponseState(response);
+    } catch (error, stacktrace) {
+      baseBloc.emit(ApiCallFailureState(error));
+      print(stacktrace);
+    } finally {
+      await Future.delayed(const Duration(milliseconds: 500), () {});
+      baseBloc.emit(ShowProgressIndicatorState(false));
+    }
+  }
+
+  Stream<AttendVisitStates> _mapQuickComplaintListRequestCallEventToState(
+      QuickComplaintListRequestCallEvent event) async* {
+    try {
+      baseBloc.emit(ShowProgressIndicatorState(true));
+
+      QucikComplaintListResponse response = await userRepository
+          .getQuickComplaintListAPI(event.quickComplaintListRequest);
+      yield QuickComplaintListResponseState(response);
+    } catch (error, stacktrace) {
+      baseBloc.emit(ApiCallFailureState(error));
+      print(stacktrace);
+    } finally {
+      await Future.delayed(const Duration(milliseconds: 500), () {});
+      baseBloc.emit(ShowProgressIndicatorState(false));
+    }
+  }
+
+  Stream<AttendVisitStates> _mapQuickComplaintSaveRequestCallEventToState(
+      QuickComplaintSaveRequestCallEvent event) async* {
+    try {
+      baseBloc.emit(ShowProgressIndicatorState(true));
+
+      QucikComplaintSaveResponse response =
+          await userRepository.getQuickComplaintSaveAPI(
+              event.pkID, event.quickComplaintSaveRequest);
+
+      if (response.details[0].column1.toString() != "-1") {
+        await userRepository.InvoiceDocumentDeleteAPI(
+            MaterialOutwardDocumentDeleteRequest(
+                KeyValue: response.details[0].column3.toString(),
+                ModuleName: "Visit",
+                LoginUserID: event.quickComplaintSaveRequest.LoginUserID,
+                CompanyId:
+                    event.quickComplaintSaveRequest.CompanyId.toString()));
+
+        if (event.invoiceDocumentList.length != 0) {
+          for (int i = 0; i < event.invoiceDocumentList.length; i++) {
+            if (event.invoiceDocumentList[i].path != "") {
+              await userRepository.getinvoicedocumentuploadapi(
+                event.invoiceDocumentList[i],
+                MaterialOutwardDocumentUploadRequest(
+                  pkID: "0",
+                  ModuleName: "Visit",
+                  DocName: "Visit" +
+                      "-" +
+                      response.details[0].column3.toString() +
+                      "-" +
+                      event.invoiceDocumentList[i].path
+                          .split('/')
+                          .last
+                          .toString()
+                          .trim(),
+                  KeyValue: response.details[0].column3.toString(),
+                  LoginUserID: event.quickComplaintSaveRequest.LoginUserID,
+                  CompanyId:
+                      event.quickComplaintSaveRequest.CompanyId.toString(),
+                ),
+              );
+            }
+          }
+        }
+      }
+
+      yield QuickComplaintSaveResponseState(response);
+    } catch (error, stacktrace) {
+      baseBloc.emit(ApiCallFailureState(error));
+      print(stacktrace);
+    } finally {
+      await Future.delayed(const Duration(milliseconds: 500), () {});
+      baseBloc.emit(ShowProgressIndicatorState(false));
+    }
+  }
+
+  Stream<AttendVisitStates> _mapUserMenuRightsRequestEventState(
+      UserMenuRightsRequestEvent event) async* {
+    try {
+      baseBloc.emit(ShowProgressIndicatorState(true));
+
+      UserMenuRightsResponse respo = await userRepository.user_menurightsapi(
+          event.MenuID, event.userMenuRightsRequest);
+      yield UserMenuRightsResponseState(respo);
+    } catch (error, stacktrace) {
+      baseBloc.emit(ApiCallFailureState(error));
+      print(stacktrace);
+    } finally {
+      baseBloc.emit(ShowProgressIndicatorState(false));
+    }
+  }
+
+  Stream<AttendVisitStates> _mapFollowupCustomerListByNameCallEventToState(
+      SearchFollowupCustomerListByNameCallEvent event) async* {
+    try {
+      baseBloc.emit(ShowProgressIndicatorState(true));
+      CustomerLabelvalueRsponse response =
+          await userRepository.getCustomerListSearchByName(event.request);
+      yield FollowupCustomerListByNameCallResponseState(response);
+    } catch (error, stacktrace) {
+      baseBloc.emit(ApiCallFailureState(error));
+      print(stacktrace);
+    } finally {
+      await Future.delayed(const Duration(milliseconds: 500), () {});
+
+      baseBloc.emit(ShowProgressIndicatorState(false));
+    }
+  }
+
+  Stream<AttendVisitStates> _mapVehicleDefDocumentListEventState(
+      DefDocumentListRequestEvent event) async* {
+    try {
+      baseBloc.emit(ShowProgressIndicatorState(true));
+
+      MaterialOutwardDocumentListResponse response =
+          await userRepository.InvoiceDocumentListAPI(
+              event.vehicleModuleListRequest);
+
+      List<File> DocumentList = [];
+
+      for (int i = 0; i < response.details.length; i++) {
+        try {
+          String uriString =
+              event.SiteURL + "/ModuleDocs/" + response.details[i].docName;
+
+          try {
+            Directory dir = await path_provider.getTemporaryDirectory();
+            dir.exists();
+            String pathName = path.join(dir.path, response.details[i].docName);
+
+            await Dio().download(uriString, pathName);
+            print("Download Completed.");
+
+            File file = await toFile(pathName);
+            DocumentList.add(file);
+          } catch (e) {
+            print("Download Failed.\n\n" + e.toString());
+          }
+        } on UnsupportedError catch (e) {
+          print(e.message);
+        } on IOException catch (e) {
+          print(e);
+        } catch (e) {
+          print(e);
+        }
+      }
+
+      yield DefDocumentListResponseState(
+          response, event.vehicleDefDetails, DocumentList);
+    } catch (error, stacktrace) {
+      baseBloc.emit(ApiCallFailureState(error));
+      print(stacktrace);
+    } finally {
+      baseBloc.emit(ShowProgressIndicatorState(false));
+    }
+  }
+}

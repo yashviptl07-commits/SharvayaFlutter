@@ -1,0 +1,1666 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:soleoserp/blocs/MainBloc/mainBloc.dart';
+import 'package:soleoserp/models/api_requests/constant_master/constant_request.dart';
+import 'package:soleoserp/models/api_responses/company_details/company_details_response.dart';
+import 'package:soleoserp/models/api_responses/inquiry/inquiry_product_search_response.dart';
+import 'package:soleoserp/models/api_responses/login/login_user_details_api_response.dart';
+import 'package:soleoserp/models/common/Material_Inward_Product_table.dart';
+import 'package:soleoserp/models/common/all_name_id_list.dart';
+import 'package:soleoserp/models/common/sales_bill_table.dart';
+import 'package:soleoserp/ui/res/color_resources.dart';
+import 'package:soleoserp/ui/screens/DashBoard/Modules/inquiry/search_inquiry_product_screen.dart';
+import 'package:soleoserp/ui/screens/DashBoard/Modules/other_screens/dropdownscreen.dart';
+import 'package:soleoserp/ui/screens/base/base_screen.dart';
+import 'package:soleoserp/ui/widgets/common_widgets.dart';
+import 'package:soleoserp/utils/calculation/model/product_calculation_model.dart';
+import 'package:soleoserp/utils/calculation/product_calulation.dart';
+import 'package:soleoserp/utils/general_utils.dart';
+import 'package:soleoserp/utils/offline_db_helper.dart';
+import 'package:soleoserp/utils/shared_pref_helper.dart';
+
+class MaterialInwardDetailsAddEditScreenArguments {
+  MaterialInwardTable model;
+  int StateCode;
+  String OutwardNo;
+  String LocationId;
+  String CustomerID;
+
+  MaterialInwardDetailsAddEditScreenArguments(this.model, this.StateCode,
+      this.OutwardNo, this.LocationId, this.CustomerID);
+}
+
+class MaterialInwardDetailsAddEditScreen extends BaseStatefulWidget {
+  static const routeName = '/MaterialInwardDetailsAddEditScreen';
+  final MaterialInwardDetailsAddEditScreenArguments arguments;
+
+  MaterialInwardDetailsAddEditScreen(this.arguments);
+
+  @override
+  _MaterialInwardDetailsAddEditScreenState createState() =>
+      _MaterialInwardDetailsAddEditScreenState();
+}
+
+class _MaterialInwardDetailsAddEditScreenState
+    extends BaseState<MaterialInwardDetailsAddEditScreen>
+    with BasicScreen, WidgetsBindingObserver {
+  TextEditingController _productNameController = TextEditingController();
+  TextEditingController _productIDController = TextEditingController();
+  TextEditingController _quantityController = TextEditingController();
+  TextEditingController _unitController = TextEditingController();
+
+  TextEditingController _unitPriceController = TextEditingController();
+  TextEditingController _discPerController = TextEditingController();
+  TextEditingController _discAmountController = TextEditingController();
+
+  TextEditingController _netRateController = TextEditingController();
+  TextEditingController _amountController = TextEditingController();
+  TextEditingController _taxPerController = TextEditingController();
+  TextEditingController _taxAmountController = TextEditingController();
+  TextEditingController _taxTypeController = TextEditingController();
+  TextEditingController edt_Specification = TextEditingController();
+  TextEditingController edt_CGST_Per = TextEditingController();
+  TextEditingController edt_SGST_Per = TextEditingController();
+  TextEditingController edt_CGST_Amount = TextEditingController();
+  TextEditingController edt_SGST_Amount = TextEditingController();
+  TextEditingController edt_IGST_Per = TextEditingController();
+  TextEditingController edt_IGST_Amount = TextEditingController();
+  TextEditingController edt_StateCode = TextEditingController();
+  TextEditingController txt_TotalNetAmnt = TextEditingController();
+  TextEditingController edt_datecode = TextEditingController();
+  TextEditingController edt_LocationId = TextEditingController();
+  TextEditingController edt_Sampleqty = TextEditingController();
+  TextEditingController edt_OrderNo = TextEditingController();
+
+  TextEditingController _totalAmountController = TextEditingController();
+  FocusNode QuantityFocusNode;
+
+  final _formKey = GlobalKey<FormState>();
+  bool isForUpdate = false;
+  bool isProductExist = false;
+  bool isProductExistAfter = false;
+  String ConstantMAster = "";
+  MainBloc _mainBloc;
+  List<ALL_Name_ID> arr_ALL_Name_ID_For_OrderNo = [];
+  ProductSearchDetails _searchDetails;
+  double airFlow;
+  double velocity;
+  double valueFinal;
+  String sam, sam2;
+  String airFlowText, velocityText, finalText;
+  List<MaterialInwardTable> _inquiryProductList = [];
+  CompanyDetailsResponse _offlineCompanyData;
+  LoginUserDetialsResponse _offlineLoggedInData;
+  int CompanyID = 0;
+  String LoginUserID = "";
+  double CardViewHeight = 50;
+
+  double TotalNetAmnt = 0.00;
+
+  String _HeaderDiscAmnt = "0.00";
+
+  String _QuotationNo = "";
+
+  @override
+  void initState() {
+    super.initState();
+    screenStatusBarColor = colorPrimary;
+    _offlineLoggedInData = SharedPrefHelper.instance.getLoginUserData();
+    _offlineCompanyData = SharedPrefHelper.instance.getCompanyData();
+    LoginUserID = _offlineLoggedInData.details[0].userID;
+    CompanyID = _offlineCompanyData.details[0].pkId;
+
+    _QuotationNo = widget.arguments.OutwardNo;
+    QuantityFocusNode = FocusNode();
+    edt_LocationId.text = widget.arguments.LocationId;
+
+    if (widget.arguments.model != null) {
+      isForUpdate = true;
+
+      _productNameController.text = widget.arguments.model.ProductName;
+      _productIDController.text = widget.arguments.model.ProductID.toString();
+      _quantityController.text = widget.arguments.model.Quantity.toString();
+      _unitController.text = widget.arguments.model.Unit.toString();
+      _unitPriceController.text = widget.arguments.model.UnitRate;
+      _netRateController.text = widget.arguments.model.NetRate;
+      _discPerController.text = widget.arguments.model.DiscountPercent;
+      _discAmountController.text = widget.arguments.model.DiscountAmt;
+
+      _amountController.text = widget.arguments.model.Amount;
+
+      _taxTypeController.text = widget.arguments.model.TaxType;
+      edt_Sampleqty.text = widget.arguments.model.SampleQuantity;
+      edt_OrderNo.text = widget.arguments.model.OrderNo;
+
+      _taxPerController.text = widget.arguments.model.TaxRate;
+      _taxAmountController.text = widget.arguments.model.TaxAmount;
+      _totalAmountController.text = widget.arguments.model.NetAmount;
+      edt_Specification.text =
+          widget.arguments.model.ProductSpecification.toString();
+      edt_StateCode.text = widget.arguments.StateCode.toString();
+      edt_CGST_Per.text = "0.00";
+      edt_SGST_Per.text = "0.00";
+      edt_CGST_Amount.text = "0.00";
+      edt_SGST_Amount.text = "0.00";
+
+      edt_datecode.text = widget.arguments.model.DateCode;
+
+      print("nkcjbicbc" + widget.arguments.model.OrderNo);
+      //_totalAmountController.text = _quantityController.text +_unitPriceController.text ;
+    } else {
+      _quantityController.text = "0.00";
+      _unitPriceController.text = "0.00";
+      _discPerController.text = "0.00";
+      _netRateController.text = "0.00";
+      _amountController.text = "0.00";
+      _taxPerController.text = "0.00";
+      _taxAmountController.text = "0.00";
+      _totalAmountController.text = "0.00";
+      edt_CGST_Per.text = "0.00";
+      edt_SGST_Per.text = "0.00";
+      edt_CGST_Amount.text = "0.00";
+      edt_SGST_Amount.text = "0.00";
+
+      if (widget.arguments.StateCode != null) {
+        edt_StateCode.text = widget.arguments.StateCode.toString();
+      }
+    }
+
+    _quantityController.addListener(TotalAmountCalculation);
+    _unitPriceController.addListener(TotalAmountCalculation);
+    _discPerController.addListener(TotalAmountCalculation);
+    _discAmountController.addListener(TotalAmountCalculation);
+    _netRateController.addListener(TotalAmountCalculation);
+    _amountController.addListener(TotalAmountCalculation);
+    _taxPerController.addListener(TotalAmountCalculation);
+    _taxAmountController.addListener(TotalAmountCalculation);
+    _totalAmountController.addListener(TotalAmountCalculation);
+    _taxTypeController.addListener(TotalAmountCalculation);
+    edt_CGST_Per.addListener(TotalAmountCalculation);
+    edt_SGST_Per.addListener(TotalAmountCalculation);
+    edt_CGST_Amount.addListener(TotalAmountCalculation);
+    edt_SGST_Amount.addListener(TotalAmountCalculation);
+
+    _mainBloc = MainBloc(baseBloc);
+
+    print("HeaderDis7upc" + _HeaderDiscAmnt);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (BuildContext context) => _mainBloc,
+      child: BlocConsumer<MainBloc, MainStates>(
+        builder: (BuildContext context, MainStates state) {
+          if (state is MaterialOutwardConstantResponseState) {
+            _onGetConstant(state);
+          }
+          return super.build(context);
+        },
+        buildWhen: (oldState, currentState) {
+          if (currentState is MaterialOutwardConstantResponseState) {
+            return true;
+          }
+          return false;
+        },
+        listener: (BuildContext context, MainStates state) {},
+        listenWhen: (oldState, currentState) {
+          return false;
+        },
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    // Clean up the focus node when the Form is disposed.
+
+    super.dispose();
+    QuantityFocusNode.dispose();
+    _quantityController.dispose();
+    _unitPriceController.dispose();
+    _discPerController.dispose();
+    _netRateController.dispose();
+    _amountController.dispose();
+    _taxPerController.dispose();
+    _taxAmountController.dispose();
+    _totalAmountController.dispose();
+    edt_Specification.dispose();
+    edt_CGST_Per.dispose();
+    edt_SGST_Per.dispose();
+    edt_CGST_Amount.dispose();
+    edt_SGST_Amount.dispose();
+  }
+
+  @override
+  Widget buildBody(BuildContext context) {
+    return Column(
+      children: [
+        getCommonAppBar(context, baseTheme,
+            "${isForUpdate ? "Update" : "Add"} Material Inward Product",
+            showBack: true, showHome: true),
+        Expanded(
+          child: SingleChildScrollView(
+              child: Container(
+            padding: EdgeInsets.all(10),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  _buildSearchView(),
+                  SizedBox(
+                    height: 10,
+                  ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 1, child: Quantity()),
+                      Expanded(flex: 1, child: UNIT()),
+                    ],
+                  ),
+                  SizedBox(
+                    height: 10,
+                  ),
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(flex: 1, child: UnitPrice()),
+                    Expanded(flex: 1, child: DiscPer()),
+                  ]),
+                  SizedBox(
+                    height: 10,
+                  ),
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(flex: 1, child: NetRate()),
+                    Expanded(child: Amount()),
+                  ]),
+                  SizedBox(
+                    height: 10,
+                  ),
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(flex: 1, child: TaxPer()),
+                    Expanded(flex: 1, child: TaxAmount()),
+                  ]),
+                  SizedBox(
+                    height: 10,
+                  ),
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(flex: 1, child: TotalAmount()),
+                    Expanded(flex: 1, child: DateCode()),
+                  ]),
+                  /* SizedBox(
+                        height: 10,
+                      ),
+                      CustomDropDownLocation(
+                        "Order No",
+                        enable1: false,
+                        icon: Icon(Icons.arrow_drop_down),
+                        controllerVehical: edt_OrderNo,
+                        vehicalList: arr_ALL_Name_ID_For_OrderNo,
+                      ),*/
+                  SizedBox(
+                    height: 10,
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        margin: EdgeInsets.only(left: 10, right: 10),
+                        child: Text("Specification",
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: colorBlack,
+                                fontWeight: FontWeight
+                                    .bold) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+                            ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.only(left: 7, right: 7, top: 10),
+                        child: TextFormField(
+                          validator: (value) {
+                            if (value.toString().trim().isEmpty) {
+                              return "Please enter this field";
+                            }
+                            return null;
+                          },
+                          controller: edt_Specification,
+                          minLines: 2,
+                          maxLines: 5,
+                          keyboardType: TextInputType.multiline,
+                          decoration: InputDecoration(
+                              contentPadding: EdgeInsets.all(10.0),
+                              hintText: 'Enter Details',
+                              hintStyle: TextStyle(color: Colors.grey),
+                              border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10)),
+                              )),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(
+                    height: 20,
+                  ),
+                  getCommonButton(baseTheme, () {
+                    if (_productNameController.text != "") {
+                      if (_quantityController.text != "") {
+                        if (double.parse(_quantityController.text) > 0) {
+                          if (_unitPriceController.text != "") {
+                            if (double.parse(_unitPriceController.text) > 0) {
+                              List<String> table = productCalculation
+                                  .producwisecalculation(2.0, 3.0);
+
+                              for (int i = 0; i < table.length; i++) {
+                                print("CalculateResult" +
+                                    " Result : " +
+                                    table[i]);
+                              }
+                              _onTapOfAdd();
+                            } else {
+                              showCommonDialogWithSingleOption(context,
+                                  "UnitRate Should not be Zero Value..!!",
+                                  positiveButtonTitle: "OK",
+                                  onTapOfPositiveButton: () {
+                                Navigator.of(context).pop();
+                              });
+                            }
+                          } else {
+                            showCommonDialogWithSingleOption(context,
+                                "UnitRate Should not be Blank Value..!!",
+                                positiveButtonTitle: "OK",
+                                onTapOfPositiveButton: () {
+                              Navigator.of(context).pop();
+                            });
+                          }
+                        } else {
+                          showCommonDialogWithSingleOption(
+                              context, "Quantity Should not be Zero Value..!!",
+                              positiveButtonTitle: "OK",
+                              onTapOfPositiveButton: () {
+                            Navigator.of(context).pop();
+                          });
+                        }
+                      } else {
+                        showCommonDialogWithSingleOption(
+                            context, "Quantity Should not be Blank Value..!!",
+                            positiveButtonTitle: "OK",
+                            onTapOfPositiveButton: () {
+                          Navigator.of(context).pop();
+                        });
+                      }
+                    } else {
+                      showCommonDialogWithSingleOption(
+                          context, "ProductName is required..!!",
+                          positiveButtonTitle: "OK", onTapOfPositiveButton: () {
+                        Navigator.of(context).pop();
+                      });
+                    }
+                  }, isForUpdate ? "Update" : "Add")
+                ],
+              ),
+            ),
+          )),
+        ),
+      ],
+    );
+  }
+
+  Widget CustomDropDownLocation(
+    String Outsource, {
+    bool enable1,
+    Icon icon,
+    TextEditingController controllerVehical,
+    List<ALL_Name_ID> vehicalList,
+  }) {
+    return Container(
+      child: Column(
+        children: [
+          InkWell(
+              onTap: () {
+                /* _mainBloc.add(PODrpListRequestEvent(
+                    PODrpListRequest(
+                      ApprovalStatus: "Pending",
+                      LoginUserID: LoginUserID,
+                      Month: "0",
+                      Year: "0",
+                      CustomerID: widget.arguments.CustomerID,
+                      ProductID: _productIDController.text,
+                      CompanyId: CompanyID.toString(),
+                )));*/
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                    child: Text(
+                      "Order No",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Card(
+                    margin: EdgeInsets.symmetric(horizontal: 10),
+                    elevation: 8,
+                    color: Colors.grey[50],
+                    shadowColor: Colors.blue,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Container(
+                      height: 55,
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              enabled: false,
+                              textInputAction: TextInputAction.next,
+                              controller: controllerVehical,
+                              decoration: InputDecoration(
+                                hintText: "--- Select ---",
+                                hintStyle:
+                                    TextStyle(color: Colors.grey.shade400),
+                                border: InputBorder.none,
+                              ),
+                              style: TextStyle(
+                                  fontSize: 16, color: Colors.black87),
+                            ),
+                          ),
+                          edt_OrderNo.text != ""
+                              ? InkWell(
+                                  onTap: () {
+                                    edt_OrderNo.text = "";
+                                    setState(() {});
+                                  },
+                                  child: Icon(
+                                    Icons.close,
+                                    color: colorGrayDark,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.arrow_drop_down,
+                                  color: colorGrayDark,
+                                )
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              )),
+        ],
+      ),
+    );
+  }
+
+  /* void _onLocationListCallResponse(PODrpListResponseState state) {
+    arr_ALL_Name_ID_For_OrderNo.clear();
+    if (state.response.details.length != 0) {
+      for (var i = 0; i < state.response.details.length; i++) {
+        ALL_Name_ID categoryResponse123 = ALL_Name_ID();
+        categoryResponse123.Name = state.response.details[i].orderNo;
+        arr_ALL_Name_ID_For_OrderNo.add(categoryResponse123);
+      }
+
+      if (arr_ALL_Name_ID_For_OrderNo.length != 0) {
+        navigateTo(context, VehicleListDropDownScreen.routeName,
+            arguments: VehicleListDropDownScreenArgument(
+                arr_ALL_Name_ID_For_OrderNo,
+                "Types Of Order No",
+                "Three Chars To Search Order No ",
+                "Tap To Enter Order No"))
+            .then((value) {
+          if (value.toString() == "clear") {
+            edt_OrderNo.text = "";
+          } else {
+            ALL_Name_ID model = value;
+            edt_OrderNo.text = model.Name;
+          }
+          setState(() {});
+        });
+      }
+    }
+  }*/
+
+  _onTapOfAdd() async {
+    var CGSTPer = 0.00;
+    var CGSTAmount = 0.00;
+    var SGSTPer = 0.00;
+    var SGSTAmount = 0.00;
+    var IGSTPer = 0.00;
+    var IGSTAmount = 0.00;
+
+    if (_discPerController.text == "") {
+      _discPerController.text = "0.00";
+    }
+    if (_taxPerController.text == "") {
+      _taxPerController.text = "0.00";
+    }
+
+    int productID = int.parse(_productIDController.text.toString());
+    double quantity = double.parse(_quantityController.text.toString());
+    double unitRate = double.parse(_unitPriceController.text.toString());
+    double disc = double.parse(_discPerController.text.toString());
+    double discAmount = double.parse(_discAmountController.text.toString());
+    double netRate = double.parse(_netRateController.text.toString());
+    double amount = double.parse(_amountController.text.toString());
+    double taxPer = double.parse(_taxPerController.text.toString());
+    double taxAmount = double.parse(_taxAmountController.text.toString());
+    double netAmount = double.parse(_totalAmountController.text.toString());
+    String Specification = edt_Specification.text.toString();
+    String unit = _unitController.text.toString();
+
+    double Taxtype = 0.00;
+    int ISTaxType = 0;
+
+    if (_taxTypeController.text != null) {
+      Taxtype = double.parse(_taxTypeController.text);
+      ISTaxType = Taxtype.toInt();
+    }
+    int StateCode = int.parse(edt_StateCode.text);
+
+    if (_offlineLoggedInData.details[0].stateCode ==
+        int.parse(edt_StateCode.text)) {
+      CGSTPer = taxPer / 2;
+      edt_CGST_Per.text = CGSTPer.toStringAsFixed(2);
+      SGSTPer = taxPer / 2;
+      edt_SGST_Per.text = CGSTPer.toStringAsFixed(2);
+      CGSTAmount = taxAmount / 2;
+      edt_CGST_Amount.text = CGSTPer.toStringAsFixed(2);
+      SGSTAmount = taxAmount / 2;
+      edt_SGST_Amount.text = CGSTPer.toStringAsFixed(2);
+      edt_IGST_Per.text = "";
+      edt_IGST_Amount.text = "";
+    } else {
+      edt_CGST_Per.text = "";
+      edt_SGST_Per.text = "";
+      edt_CGST_Amount.text = "";
+      edt_SGST_Amount.text = "";
+      IGSTPer = taxPer;
+      edt_IGST_Per.text = CGSTPer.toStringAsFixed(2);
+      IGSTAmount = taxAmount;
+      edt_IGST_Amount.text = CGSTPer.toStringAsFixed(2);
+    }
+
+    await getInquiryProductDetails();
+
+    if (ConstantMAster.toLowerCase() == "yes") {
+      isProductExistAfter = false;
+    } else {
+      isProductExistAfter = true;
+    }
+
+    if (isProductExist == false) {
+      if (isForUpdate) {
+        await OfflineDbHelper.getInstance()
+            .updateMaterialInwardProductsProducts(MaterialInwardTable(
+                "0", //String RowNum,
+                "0", //String pkID,
+                LoginUserID, //String LoginUserID,
+                CompanyID.toString(), //String CompanyId,
+                "", //String InwardNo,
+                "", //String InwardDate,
+                edt_datecode.text, //String DateCode,
+                "", //String CustomerID,
+                "", //String CustomerName,
+                productID.toString(), //String ProductID,
+                _productNameController.text, //String ProductName,
+                "", //String ProductNameLong,
+                Specification, //String ProductSpecification,
+                quantity.toString(), //String Quantity,
+                unit, //String Unit,
+                unitRate.toString(), //String UnitRate,
+                disc.toString(), //String DiscountPercent,
+                discAmount.toString(), //String DiscountAmt,
+                netRate.toString(), //String NetRate,
+                netAmount.toString(), //String Amount,
+                ISTaxType.toString(), //String TaxType,
+                taxPer.toString(), //String TaxRate,
+                taxAmount.toString(), //String TaxAmount,
+                netAmount.toString(), //String NetAmount,
+                CGSTPer.toString(), //String CGSTPer,
+                CGSTAmount.toString(), //String CGSTAmt,
+                SGSTPer.toString(), //String SGSTPer,
+                SGSTAmount.toString(), //String SGSTAmt,
+                IGSTPer.toString(), //String IGSTPer,
+                IGSTAmount.toString(), //String IGSTAmt,
+                edt_OrderNo.text, //String OrderNo,
+                StateCode.toString(), //String StateCode
+                edt_LocationId.text, //String StateCode
+                edt_Sampleqty.text,
+                id: widget.arguments.model.id));
+      } else {
+        await OfflineDbHelper.getInstance()
+            .insertMaterialinwardProduct(MaterialInwardTable(
+          "0", //String RowNum,
+          "0", //String pkID,
+          LoginUserID, //String LoginUserID,
+          CompanyID.toString(), //String CompanyId,
+          "", //String InwardNo,
+          "", //String InwardDate,
+          edt_datecode.text, //String DateCode,
+          "", //String CustomerID,
+          "", //String CustomerName,
+          productID.toString(), //String ProductID,
+          _productNameController.text, //String ProductName,
+          "", //String ProductNameLong,
+          Specification, //String ProductSpecification,
+          quantity.toString(), //String Quantity,
+          unit, //String Unit,
+          unitRate.toString(), //String UnitRate,
+          disc.toString(), //String DiscountPercent,
+          discAmount.toString(), //String DiscountAmt,
+          netRate.toString(), //String NetRate,
+          netAmount.toString(), //String Amount,
+          ISTaxType.toString(), //String TaxType,
+          taxPer.toString(), //String TaxRate,
+          taxAmount.toString(), //String TaxAmount,
+          netAmount.toString(), //String NetAmount,
+          CGSTPer.toString(), //String CGSTPer,
+          CGSTAmount.toString(), //String CGSTAmt,
+          SGSTPer.toString(), //String SGSTPer,
+          SGSTAmount.toString(), //String SGSTAmt,
+          IGSTPer.toString(), //String IGSTPer,
+          IGSTAmount.toString(), //String IGSTAmt,
+          edt_OrderNo.text, //String OrderNo,
+          StateCode.toString(), //String StateCode
+          edt_LocationId.text, //String StateCode
+          quantity.toString(),
+        ));
+      }
+      Navigator.of(context).pop(_inquiryProductList);
+    } else {
+      if (isForUpdate) {
+        await OfflineDbHelper.getInstance()
+            .updateMaterialInwardProductsProducts(MaterialInwardTable(
+                "0", //String RowNum,
+                "0", //String pkID,
+                LoginUserID, //String LoginUserID,
+                CompanyID.toString(), //String CompanyId,
+                "", //String InwardNo,
+                "", //String InwardDate,
+                edt_datecode.text, //String DateCode,
+                "", //String CustomerID,
+                "", //String CustomerName,
+                productID.toString(), //String ProductID,
+                _productNameController.text, //String ProductName,
+                "", //String ProductNameLong,
+                Specification, //String ProductSpecification,
+                quantity.toString(), //String Quantity,
+                unit, //String Unit,
+                unitRate.toString(), //String UnitRate,
+                disc.toString(), //String DiscountPercent,
+                discAmount.toString(), //String DiscountAmt,
+                netRate.toString(), //String NetRate,
+                netAmount.toString(), //String Amount,
+                ISTaxType.toString(), //String TaxType,
+                taxPer.toString(), //String TaxRate,
+                taxAmount.toString(), //String TaxAmount,
+                netAmount.toString(), //String NetAmount,
+                CGSTPer.toString(), //String CGSTPer,
+                CGSTAmount.toString(), //String CGSTAmt,
+                SGSTPer.toString(), //String SGSTPer,
+                SGSTAmount.toString(), //String SGSTAmt,
+                IGSTPer.toString(), //String IGSTPer,
+                IGSTAmount.toString(), //String IGSTAmt,
+                edt_OrderNo.text, //String OrderNo,
+                StateCode.toString(), //String StateCode
+                edt_LocationId.text, //String StateCode
+                edt_Sampleqty.text,
+                id: widget.arguments.model.id));
+        Navigator.of(context).pop(_inquiryProductList);
+      } else {
+        if (isProductExistAfter == false) {
+          await OfflineDbHelper.getInstance()
+              .insertMaterialinwardProduct(MaterialInwardTable(
+            "0", //String RowNum,
+            "0", //String pkID,
+            LoginUserID, //String LoginUserID,
+            CompanyID.toString(), //String CompanyId,
+            "", //String InwardNo,
+            "", //String InwardDate,
+            edt_datecode.text, //String DateCode,
+            "", //String CustomerID,
+            "", //String CustomerName,
+            productID.toString(), //String ProductID,
+            _productNameController.text, //String ProductName,
+            "", //String ProductNameLong,
+            Specification, //String ProductSpecification,
+            quantity.toString(), //String Quantity,
+            unit, //String Unit,
+            unitRate.toString(), //String UnitRate,
+            disc.toString(), //String DiscountPercent,
+            discAmount.toString(), //String DiscountAmt,
+            netRate.toString(), //String NetRate,
+            netAmount.toString(), //String Amount,
+            ISTaxType.toString(), //String TaxType,
+            taxPer.toString(), //String TaxRate,
+            taxAmount.toString(), //String TaxAmount,
+            netAmount.toString(), //String NetAmount,
+            CGSTPer.toString(), //String CGSTPer,
+            CGSTAmount.toString(), //String CGSTAmt,
+            SGSTPer.toString(), //String SGSTPer,
+            SGSTAmount.toString(), //String SGSTAmt,
+            IGSTPer.toString(), //String IGSTPer,
+            IGSTAmount.toString(), //String IGSTAmt,
+            edt_OrderNo.text, //String OrderNo,
+            StateCode.toString(), //String StateCode
+            edt_LocationId.text, //String StateCode
+            quantity.toString(), //String StateCode
+          ));
+          Navigator.of(context).pop(_inquiryProductList);
+        } else {
+          showCommonDialogWithSingleOption(
+              context, "Duplicate Product Not Allowed..!!",
+              positiveButtonTitle: "OK", onTapOfPositiveButton: () {
+            Navigator.of(context).pop();
+          });
+        }
+      }
+    }
+  }
+
+  Widget Quantity() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          child: Text("Quantity *",
+              style: TextStyle(
+                  fontSize: 12,
+                  color: colorBlack,
+                  fontWeight: FontWeight
+                      .bold) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+              ),
+        ),
+        SizedBox(
+          height: 5,
+        ),
+        Card(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          elevation: 5,
+          color: Colors.grey[50],
+          shadowColor: Colors.blue,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          child: Container(
+            height: 50,
+            padding: EdgeInsets.only(left: 20, right: 20),
+            width: double.maxFinite,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                      validator: (value) {
+                        if (value.toString().trim().isEmpty) {
+                          return "Please enter this field";
+                        }
+                        return null;
+                      },
+                      focusNode: QuantityFocusNode,
+                      textInputAction: TextInputAction.next,
+                      keyboardType:
+                          TextInputType.numberWithOptions(decimal: true),
+                      controller: _quantityController,
+                      onTap: () => {
+                            _quantityController.selection = TextSelection(
+                              baseOffset: 0,
+                              extentOffset: _quantityController.text.length,
+                            )
+                          },
+                      decoration: InputDecoration(
+                        hintText: "0.00",
+                        labelStyle: TextStyle(
+                          color: Color(0xFF000000),
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF000000),
+                      ) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+                      ),
+                ),
+                /* Icon(
+                  Icons.style,
+                  color: colorGrayDark,
+                )*/
+              ],
+            ),
+          ),
+        )
+      ],
+    );
+  }
+
+  Widget UnitPrice() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          child: Text("Unit Rate *",
+              style: TextStyle(
+                  fontSize: 13,
+                  color: colorBlack,
+                  fontWeight: FontWeight
+                      .bold) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+              ),
+        ),
+        SizedBox(
+          height: 5,
+        ),
+        Card(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          elevation: 5,
+          color: Colors.grey[50],
+          shadowColor: Colors.blue,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          child: Container(
+            height: 50,
+            padding: EdgeInsets.only(left: 20, right: 20),
+            width: double.maxFinite,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                      textInputAction: TextInputAction.done,
+                      validator: (value) {
+                        if (value.toString().trim().isEmpty) {
+                          return "Please enter this field";
+                        }
+                        return null;
+                      },
+                      keyboardType:
+                          TextInputType.numberWithOptions(decimal: true),
+                      controller: _unitPriceController,
+                      onTap: () => {
+                            _unitPriceController.selection = TextSelection(
+                              baseOffset: 0,
+                              extentOffset: _unitPriceController.text.length,
+                            )
+                          },
+                      decoration: InputDecoration(
+                        hintText: "0.00",
+                        labelStyle: TextStyle(
+                          color: Color(0xFF000000),
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF000000),
+                      ) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+                      ),
+                ),
+              ],
+            ),
+          ),
+        )
+      ],
+    );
+  }
+
+  Widget DiscPer() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          child: Text("Disc.%",
+              style: TextStyle(
+                  fontSize: 13,
+                  color: colorBlack,
+                  fontWeight: FontWeight
+                      .bold) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+              ),
+        ),
+        SizedBox(
+          height: 5,
+        ),
+        Card(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          elevation: 5,
+          color: Colors.grey[50],
+          shadowColor: Colors.blue,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          child: Container(
+            height: 50,
+            padding: EdgeInsets.only(left: 20, right: 20),
+            width: double.maxFinite,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                      textInputAction: TextInputAction.done,
+                      validator: (value) {
+                        if (value.toString().trim().isEmpty) {
+                          return "Please enter this field";
+                        }
+                        return null;
+                      },
+                      onTap: () => {
+                            _discPerController.selection = TextSelection(
+                              baseOffset: 0,
+                              extentOffset: _discPerController.text.length,
+                            )
+                          },
+                      keyboardType:
+                          TextInputType.numberWithOptions(decimal: true),
+                      controller: _discPerController,
+                      decoration: InputDecoration(
+                        hintText: "0.00",
+                        labelStyle: TextStyle(
+                          color: Color(0xFF000000),
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF000000),
+                      ) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+                      ),
+                ),
+              ],
+            ),
+          ),
+        )
+      ],
+    );
+  }
+
+  Widget TaxPer() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          child: Text("Tax.%",
+              style: TextStyle(
+                  fontSize: 13,
+                  color: colorBlack,
+                  fontWeight: FontWeight
+                      .bold) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+              ),
+        ),
+        SizedBox(
+          height: 5,
+        ),
+        Card(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          elevation: 5,
+          color: Colors.grey[50],
+          shadowColor: Colors.blue,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          child: Container(
+            height: 45,
+            padding: EdgeInsets.only(left: 20, right: 20),
+            width: double.maxFinite,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                      textInputAction: TextInputAction.done,
+                      validator: (value) {
+                        if (value.toString().trim().isEmpty) {
+                          return "Please enter this field";
+                        }
+                        return null;
+                      },
+                      keyboardType:
+                          TextInputType.numberWithOptions(decimal: true),
+                      controller: _taxPerController,
+                      onTap: () => {
+                            _taxPerController.selection = TextSelection(
+                              baseOffset: 0,
+                              extentOffset: _taxPerController.text.length,
+                            )
+                          },
+                      decoration: InputDecoration(
+                        hintText: "0.00",
+                        labelStyle: TextStyle(
+                          color: Color(0xFF000000),
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF000000),
+                      ) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+                      ),
+                ),
+              ],
+            ),
+          ),
+        )
+      ],
+    );
+  }
+
+  Widget UNIT() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          child: Text("Unit  ",
+              style: TextStyle(
+                  fontSize: 13,
+                  color: colorBlack,
+                  fontWeight: FontWeight
+                      .bold) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+              ),
+        ),
+        SizedBox(
+          height: 5,
+        ),
+        Card(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          elevation: 5,
+          color: Colors.grey[50],
+          shadowColor: Colors.blue,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          child: Container(
+            height: 50,
+            padding: EdgeInsets.only(left: 20, right: 20),
+            width: double.maxFinite,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                      // key: Key(totalCalculated()),
+
+                      validator: (value) {
+                        if (value.toString().trim().isEmpty) {
+                          return "Please enter this field";
+                        }
+                        return null;
+                      },
+                      controller: _unitController,
+                      decoration: InputDecoration(
+                        hintText: "Unit",
+                        labelStyle: TextStyle(
+                          color: Color(0xFF000000),
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF000000),
+                      ) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+                      ),
+                ),
+              ],
+            ),
+          ),
+        )
+      ],
+    );
+  }
+
+  Widget TotalAmount() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          child: Text("Net Amount",
+              style: TextStyle(
+                  fontSize: 13,
+                  color: colorBlack,
+                  fontWeight: FontWeight
+                      .bold) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+              ),
+        ),
+        SizedBox(
+          height: 5,
+        ),
+        Card(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          elevation: 5,
+          color: Colors.grey[50],
+          shadowColor: Colors.blue,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          child: Container(
+            height: 45,
+            padding: EdgeInsets.only(left: 20, right: 20),
+            width: double.maxFinite,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                      // key: Key(totalCalculated()),
+
+                      validator: (value) {
+                        if (value.toString().trim().isEmpty) {
+                          return "Please enter this field";
+                        }
+                        return null;
+                      },
+                      enabled: false,
+                      keyboardType:
+                          TextInputType.numberWithOptions(decimal: true),
+                      controller: _totalAmountController,
+                      decoration: InputDecoration(
+                        hintText: "0.00",
+                        labelStyle: TextStyle(
+                          color: Color(0xFF000000),
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF000000),
+                      ) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+                      ),
+                ),
+              ],
+            ),
+          ),
+        )
+      ],
+    );
+  }
+
+  Widget NetRate() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          child: Text("Net Rate",
+              style: TextStyle(
+                  fontSize: 13,
+                  color: colorBlack,
+                  fontWeight: FontWeight
+                      .bold) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+              ),
+        ),
+        SizedBox(
+          height: 5,
+        ),
+        Card(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          elevation: 5,
+          color: Colors.grey[50],
+          shadowColor: Colors.blue,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          child: Container(
+            height: 50,
+            padding: EdgeInsets.only(left: 20, right: 20),
+            width: double.maxFinite,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                      // key: Key(totalCalculated()),
+
+                      validator: (value) {
+                        if (value.toString().trim().isEmpty) {
+                          return "Please enter this field";
+                        }
+                        return null;
+                      },
+                      enabled: false,
+                      keyboardType:
+                          TextInputType.numberWithOptions(decimal: true),
+                      controller: _netRateController,
+                      decoration: InputDecoration(
+                        hintText: "0.00",
+                        labelStyle: TextStyle(
+                          color: Color(0xFF000000),
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF000000),
+                      ) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+                      ),
+                ),
+              ],
+            ),
+          ),
+        )
+      ],
+    );
+  }
+
+  Widget Amount() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          child: Text("Amount",
+              style: TextStyle(
+                  fontSize: 13,
+                  color: colorBlack,
+                  fontWeight: FontWeight
+                      .bold) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+              ),
+        ),
+        SizedBox(
+          height: 5,
+        ),
+        Card(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          elevation: 5,
+          color: Colors.grey[50],
+          shadowColor: Colors.blue,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          child: Container(
+            height: 45,
+            padding: EdgeInsets.only(left: 20, right: 20),
+            width: double.maxFinite,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                      // key: Key(totalCalculated()),
+
+                      validator: (value) {
+                        if (value.toString().trim().isEmpty) {
+                          return "Please enter this field";
+                        }
+                        return null;
+                      },
+                      enabled: false,
+                      keyboardType:
+                          TextInputType.numberWithOptions(decimal: true),
+                      controller: _amountController,
+                      decoration: InputDecoration(
+                        hintText: "0.00",
+                        labelStyle: TextStyle(
+                          color: Color(0xFF000000),
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF000000),
+                      ) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+                      ),
+                ),
+              ],
+            ),
+          ),
+        )
+      ],
+    );
+  }
+
+  Widget TaxAmount() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          child: Text("Tax Amount",
+              style: TextStyle(
+                  fontSize: 13,
+                  color: colorBlack,
+                  fontWeight: FontWeight
+                      .bold) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+              ),
+        ),
+        SizedBox(
+          height: 5,
+        ),
+        Card(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          elevation: 5,
+          color: Colors.grey[50],
+          shadowColor: Colors.blue,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          child: Container(
+            height: 45,
+            padding: EdgeInsets.only(left: 20, right: 20),
+            width: double.maxFinite,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                      // key: Key(totalCalculated()),
+
+                      validator: (value) {
+                        if (value.toString().trim().isEmpty) {
+                          return "Please enter this field";
+                        }
+                        return null;
+                      },
+                      enabled: false,
+                      keyboardType:
+                          TextInputType.numberWithOptions(decimal: true),
+                      controller: _taxAmountController,
+                      decoration: InputDecoration(
+                        hintText: "0.00",
+                        labelStyle: TextStyle(
+                          color: Color(0xFF000000),
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF000000),
+                      ) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+                      ),
+                ),
+              ],
+            ),
+          ),
+        )
+      ],
+    );
+  }
+
+  Widget DateCode() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          child: Text("Date Code",
+              style: TextStyle(
+                  fontSize: 13,
+                  color: colorBlack,
+                  fontWeight: FontWeight
+                      .bold) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+              ),
+        ),
+        SizedBox(
+          height: 5,
+        ),
+        Card(
+          margin: EdgeInsets.only(left: 10, right: 10),
+          elevation: 5,
+          color: Colors.grey[50],
+          shadowColor: Colors.blue,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          child: Container(
+            height: 45,
+            padding: EdgeInsets.only(left: 20, right: 20),
+            width: double.maxFinite,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                      // key: Key(totalCalculated()),
+
+                      validator: (value) {
+                        if (value.toString().trim().isEmpty) {
+                          return "Please enter this field";
+                        }
+                        return null;
+                      },
+                      keyboardType: TextInputType.text,
+                      controller: edt_datecode,
+                      decoration: InputDecoration(
+                        hintText: "",
+                        labelStyle: TextStyle(
+                          color: Color(0xFF000000),
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF000000),
+                      ) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+                      ),
+                ),
+              ],
+            ),
+          ),
+        )
+      ],
+    );
+  }
+
+  Widget _buildSearchView() {
+    return InkWell(
+        onTap: () {
+          print("VlaueForISForUpdate" + isForUpdate.toString());
+          if (isForUpdate == false) {
+            _onTapOfSearchView();
+          }
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10.0),
+              child: Text(
+                "Search Product * ",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            SizedBox(height: 8),
+            Card(
+              margin: EdgeInsets.symmetric(horizontal: 10),
+              elevation: 8,
+              color: Colors.grey[50],
+              shadowColor: Colors.blue,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              child: Container(
+                height: 55,
+                padding: EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                          validator: (value) {
+                            if (value.toString().trim().isEmpty) {
+                              return "Please enter this field";
+                            }
+                            return null;
+                          },
+                          onTap: () {
+                            if (isForUpdate == false) {
+                              _onTapOfSearchView();
+                            }
+                          },
+                          readOnly: true,
+                          controller: _productNameController,
+                          decoration: InputDecoration(
+                            hintText: "Tap to search Product",
+                            labelStyle: TextStyle(
+                              color: Color(0xFF000000),
+                            ),
+                            border: InputBorder.none,
+                          ),
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Color(0xFF000000),
+                          ) // baseTheme.textTheme.headline2.copyWith(color: colorBlack),
+
+                          ),
+                    ),
+                    Icon(
+                      Icons.search,
+                      color: colorGrayDark,
+                    )
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ));
+  }
+
+  Future<void> _onTapOfSearchView() async {
+    navigateTo(
+      context,
+      SearchInquiryProductScreen.routeName,
+    ).then((value) {
+      if (value != null) {
+        _searchDetails = ProductSearchDetails();
+        _searchDetails = value;
+        setState(() {
+          _quantityController.text = "0.00";
+          _unitPriceController.text = "0.00";
+          _discPerController.text = "0.00";
+          _netRateController.text = "0.00";
+          _amountController.text = "0.00";
+          _taxPerController.text = "0.00";
+          _taxAmountController.text = "0.00";
+          _totalAmountController.text = "0.00";
+          _taxTypeController.text = "";
+          _unitController.text = "";
+          edt_Specification.text = "";
+          edt_CGST_Per.text = "";
+          edt_SGST_Per.text = "";
+          edt_CGST_Amount.text = "";
+          edt_SGST_Amount.text = "";
+
+          // edt_Specification.text = "";
+          _productNameController.text = _searchDetails.productName.toString();
+          _productIDController.text = _searchDetails.pkID.toString();
+          _unitPriceController.text = _searchDetails.unitPrice.toString();
+          _taxPerController.text = _searchDetails.taxRate.toString();
+          _taxTypeController.text = _searchDetails.taxType.toString();
+          _unitController.text = _searchDetails.unit.toString();
+          edt_Specification.text =
+              _searchDetails.ProductSpecification.toString();
+
+          //_totalAmountController.text = ""
+          if (_productNameController.text ==
+              _searchDetails.productName.toString()) {
+            QuantityFocusNode.requestFocus();
+          }
+          _quantityController.selection = TextSelection(
+            baseOffset: 0,
+            extentOffset: _quantityController.text.length,
+          );
+        });
+      }
+    });
+
+    _mainBloc.add(MaterialOutwardConstantRequestEvent(
+        CompanyID.toString(),
+        ConstantRequest(
+            ConstantHead: "QuotationProDuplication",
+            CompanyId: CompanyID.toString())));
+  }
+
+  TotalAmountCalculation() async {
+    ProductCalculationModel productoutparam =
+        productCalculation.funCalculateProduct(
+      UnitQuantity: 1,
+      TaxType: int.parse(
+          _taxTypeController.text == "" ? "0" : _taxTypeController.text),
+      Qty: double.parse(_quantityController.text),
+      Rate: double.parse(_unitPriceController.text),
+      ItmDiscPer: double.parse(_discPerController.text),
+      ItmDiscAmt: 0,
+      TaxPer: double.parse(_taxPerController.text),
+      AddTaxPer: 0,
+      HdDiscAmt: 0,
+      CustomerStateId: edt_StateCode.text,
+      CompanyStateId: _offlineLoggedInData.details[0].stateCode.toString(),
+      TaxAmt: 0,
+      CGSTPer: 0,
+      CGSTAmt: 0,
+      SGSTPer: 0,
+      SGSTAmt: 0,
+      IGSTPer: 0,
+      IGSTAmt: 0,
+      NetRate: 0,
+      BasicAmt: 0,
+      NetAmt: 0,
+      ItmDiscPer1: 0,
+      ItmDiscAmt1: 0,
+      AddTaxAmt: 0,
+    );
+    _netRateController.text = productoutparam.NetRate.toString();
+    _amountController.text = productoutparam.BasicAmt.toString();
+    _taxAmountController.text = productoutparam.TaxAmt.toString();
+    _totalAmountController.text = productoutparam.NetAmt.toString();
+    _discAmountController.text = productoutparam.ItmDiscAmt1.toString();
+
+    edt_CGST_Per.text = productoutparam.CGSTPer.toString();
+    edt_SGST_Per.text = productoutparam.SGSTPer.toString();
+    edt_CGST_Amount.text = productoutparam.CGSTAmt.toString();
+    edt_SGST_Amount.text = productoutparam.SGSTAmt.toString();
+    edt_IGST_Per.text = productoutparam.IGSTPer.toString();
+    edt_IGST_Amount.text = productoutparam.IGSTAmt.toString();
+  }
+
+  double getNumber(double input, {int precision = 2}) => double.parse(
+      '$input'.substring(0, '$input'.indexOf('.') + precision + 1));
+
+  Future<void> getInquiryProductDetails() async {
+    _inquiryProductList.clear();
+    List<MaterialInwardTable> temp =
+        await OfflineDbHelper.getInstance().getMaterialinwardProducts();
+    _inquiryProductList.addAll(temp);
+    if (_inquiryProductList.length != 0) {
+      for (var i = 0; i < _inquiryProductList.length; i++) {
+        print("ChekProduct" +
+            " DBProduct : " +
+            _inquiryProductList[i].ProductID.toString() +
+            " TextProduct : " +
+            _productIDController.text.toString());
+        if (_inquiryProductList[i].ProductID.toString() ==
+            _productIDController.text.toString()) {
+          isProductExist = true;
+          break;
+        } else {
+          isProductExist = false;
+        }
+      }
+    }
+  }
+
+  Future<void> getInquiryDetailsFromDb() async {
+    List<SaleBillTable> temp =
+        await OfflineDbHelper.getInstance().getSalesBillProduct();
+    for (int i = 0; i < temp.length; i++) {
+      TotalNetAmnt = TotalNetAmnt + temp[i].NetAmount;
+    }
+    print("GetNetAMnt" + "Total NetAmnt : " + TotalNetAmnt.toStringAsFixed(2));
+  }
+
+  void _onGetConstant(MaterialOutwardConstantResponseState state) {
+    for (int i = 0; i < state.response.details.length; i++) {
+      ConstantMAster = state.response.details[i].value.toString();
+    }
+  }
+}

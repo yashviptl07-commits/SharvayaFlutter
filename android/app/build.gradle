@@ -1,0 +1,75 @@
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterRoot = localProperties.getProperty('flutter.sdk')
+if (flutterRoot == null) {
+    throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+}
+
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'com.google.gms.google-services'
+apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+
+
+android {
+    compileSdkVersion 34
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    defaultConfig {
+        applicationId "com.sharvayainfotech.eofficedesk"
+        minSdkVersion 23
+        targetSdkVersion 36
+        versionCode 160
+        versionName "1.6.0"
+        ndk {
+            abiFilters "armeabi-v7a", "arm64-v8a",
+                    "x86", "x86_64"
+        }
+    }
+
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging true
+        }
+        resources {
+            excludes += ['META-INF/*.kotlin_module']
+        }
+    }
+    aaptOptions {
+        cruncherEnabled = false
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    implementation platform('com.google.firebase:firebase-bom:28.3.1')
+    implementation 'com.google.firebase:firebase-analytics:20.0.2'
+    implementation 'com.google.firebase:firebase-messaging:23.0.0'
+    implementation 'com.facebook.android:facebook-android-sdk:12.3.0'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+}
